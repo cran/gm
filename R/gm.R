@@ -1,10 +1,10 @@
-#' @title gm: Generate Musical Scores Easily and Show Them Anywhere
+#' @title gm: Generate Music Easily and Show Them Anywhere
 #'
-#' @description Provides a simple and intuitive language, with which you can
-#' create complex music easily. Takes care of all the dirty technical
-#' details in converting your music to musical scores and audio files.
-#' Works in R Markdown documents, R Jupyter Notebooks and RStudio, so you
-#' can embed musical scores and audio files anywhere.
+#' @description Provides a simple and intuitive high-level language,
+#' with which you can create music easily. Takes care of all the dirty
+#' technical details in converting your music to musical scores and audio
+#' files. Works in R Markdown documents, R Jupyter Notebooks and RStudio,
+#' so you can embed generated music anywhere.
 #'
 #' @section Author:
 #' Renfei Mao <renfeimao@gmail.com>
@@ -40,7 +40,7 @@ NULL
 #' normalize_pitch
 #' normalize_pitch.numeric
 #' normalize_pitch.character
-#' normalize_pitch.logical
+#' normalize_pitch.default
 #' print.PitchLine
 #' print.PitchNotation
 #' print.PitchValue

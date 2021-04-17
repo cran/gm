@@ -2,23 +2,20 @@
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  
-  # open ".Renviron" file with `usethis::edit_r_environ()`
-  # add `gm_vignette=true` into it
-  # to build the vignette locally
   eval = identical(Sys.getenv("gm_vignette"), "true")
 )
 
-## ---- message = FALSE---------------------------------------------------------
+## ----message = FALSE----------------------------------------------------------
 library(gm)
-library(magrittr)
 
 ## -----------------------------------------------------------------------------
 m <- Music()
 
 ## -----------------------------------------------------------------------------
 m <- m +
+  # add a 4/4 time signature
   Meter(4, 4) +
+  # add a musical line of a C5 whole note
   Line(pitches = list("C5"), durations = list("whole"))
 
 ## -----------------------------------------------------------------------------
@@ -85,11 +82,13 @@ l <- Line(list(73, 73), list(2, 2))
 m <- Music() + Meter(2, 4) + Key(7, bar = 1) + Key(-7, bar = 2) + l
 show(m)
 
-## ---- echo = FALSE------------------------------------------------------------
-gm:::duration_types
-
-## ---- echo = FALSE------------------------------------------------------------
-gm:::duration_type_abbrs
+## ---- echo = FALSE, results = "asis"------------------------------------------
+for (i in 1:length(gm:::duration_types)) {
+  cat(paste0(
+    '- `"', (gm:::duration_types)[i], '"` or ',
+    '`"', (gm:::duration_type_abbrs)[i], '"`\n\n'
+  ))
+}
 
 ## -----------------------------------------------------------------------------
 m <- Music() + Meter(6, 4) + Line(list(NA, NA, NA), list("w", "q", "32"))
@@ -325,7 +324,7 @@ m <- Music() +
 show(m, to = c("score", "audio"))
 
 ## -----------------------------------------------------------------------------
-pitches <- c(64, 65, 69, 71, 72, 76) %>% as.list()
+pitches <- as.list(c(64, 65, 69, 71, 72, 76))
 durations <- rep(list(1), length(pitches))
 
 m <- Music() + Meter(4, 4) + Tempo(120)

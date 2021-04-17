@@ -6,7 +6,7 @@
 <!-- badges: start -->
 <!-- badges: end -->
 
-Generate musical scores and audio files easily, and show them in R
+Create music easily, and show musical scores and audio files in R
 Markdown documents, R Jupyter Notebooks and RStudio.
 
 ## Hello! World
@@ -22,17 +22,24 @@ m <-
   # add a musical line of four quarter notes
   Line(list("C5", "D5", "E5", "F5"), list(1, 1, 1, 1))
   
-show(m)
+show(m, to = c("score", "audio"))
 ```
 
 ![](man/figures/readme.png)
+
+![](man/figures/readme_audio.png)
 
 ## Installation
 
 Install gm:
 
 ``` r
-# install.packages("devtools")
+install.packages("gm")
+```
+
+Or the development version from GitHub:
+
+``` r
 devtools::install_github("flujoo/gm")
 ```
 

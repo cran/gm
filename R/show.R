@@ -287,7 +287,8 @@ segment <- function(line, meters) {
 
 
 # generate Measures for specified bars
-generate_measures <- function(bars, meters, n2, n3, voice) {
+generate_measures <- function(bars, meters, n2, n3, voice,
+                              invisible = FALSE) {
   ms <- list()
 
   for (bar in bars) {
@@ -297,7 +298,7 @@ generate_measures <- function(bars, meters, n2, n3, voice) {
 
     } else {
       d <- find_meter(bar, meters) %>% to_value()
-      r <- Rest(d, staff = n2, voice = voice)
+      r <- Rest(d, staff = n2, voice = voice, invisible = invisible)
 
       # for part
       if (n2 == 1) {
@@ -405,7 +406,7 @@ equalize <- function(lines, meters) {
     if (l_ < l) {
       lines[[i]]$measures <-
         (l_ + 1):l %>%
-        generate_measures(meters, n2, n3, voice) %>%
+        generate_measures(meters, n2, n3, voice, TRUE) %>%
         c(measures, .)
     }
   }
@@ -684,7 +685,12 @@ to_Element.Rest <- function(x, divisions, ...) {
     Element("staff", x$staff)
   )
 
-  Element("note", contents)
+  attributes <- NULL
+  if (isTRUE(x$invisible)) {
+    attributes <- list(`print-object` = "no")
+  }
+
+  Element("note", contents, attributes)
 }
 
 
@@ -900,7 +906,7 @@ call_musescore <- function(from, to, ...) {
     if (os == "Darwin") {
       path <- "/Applications/MuseScore\ 3.app/Contents/MacOS/mscore"
     } else if (os == "Windows") {
-      path <- "%ProgramFiles%/MuseScore 3/bin/MuseScore3.exe"
+      path <- "C:/Program Files/MuseScore 3/bin/MuseScore3.exe"
     } else {
       path <- "mscore"
     }
@@ -1165,7 +1171,8 @@ get_show_context <- function() {
   # then call `knitr::knit()` on that file from RStudio,
   # both clauses will be TRUE
   if (isTRUE(getOption('knitr.in.progress'))) {
-    "rmd"
+    # check if knit to pdf or word
+    ifelse(knitr::is_html_output(), "rmd", "rmd_other")
   } else if (rstudioapi::isAvailable()) {
     "rstudio"
   } else if (is_jupyter()) {
@@ -1186,17 +1193,27 @@ show_musicxml <- function(musicxml, to) {
 
   export_musicxml(musicxml, dir_path, file_name, to, "-r 115")
   context <- get_show_context()
-  content <- generate_show_content(name_path, to, context)
 
-  if (context %in% c("rmd", "jupyter")) {
-    content
+  if (context == "rmd_other" && ("png" %in% to)) {
+    name_path %>%
+      paste0(".png") %>%
+      knitr::include_graphics()
+
   } else {
-    html_path <- to_html(content, name_path)
+    content <- generate_show_content(name_path, to, context)
 
-    if (context == "rstudio") {
-      rstudioapi::viewer(html_path)
-    } else if (context == "other") {
-      utils::browseURL(html_path)
+    if (context %in% c("rmd", "jupyter")) {
+      content
+
+    } else {
+      html_path <- to_html(content, name_path)
+
+      if (context == "rstudio") {
+        rstudioapi::viewer(html_path)
+
+      } else if (context == "other") {
+        utils::browseURL(html_path)
+      }
     }
   }
 }
