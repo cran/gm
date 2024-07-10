@@ -13,736 +13,460 @@ vignette: >
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  eval = identical(Sys.getenv("gm_vignette"), "true")
+  
+  # To prevent CRAN from building this vignette:
+  # 
+  # 1. Add `BUILD_VIGNETTE=TRUE` in .Renviron before calling
+  # `devtools::build()` or `R CMD build`, to build this vignette locally.
+  # 
+  # 2. Remove `BUILD_VIGNETTE=TRUE` before calling `R CMD check --as-cran`.
+  eval = Sys.getenv("BUILD_VIGNETTE") == "TRUE"
 )
 ```
 
-
-The package name "gm" means "grammar of music" or "generate music".
-
-It provides a simple and intuitive high-level language, with which you can
-create music easily. It generates and embeds musical scores and audio files
-in R Markdown documents, R Jupyter Notebooks and RStudio seamlessly.
-
-Let's go through a quick example to get a feeling of it.
-
-
-## Quick Example
-
-Load gm:
 
 ```{r message = FALSE}
 library(gm)
 ```
 
-Initialize an empty `Music` object:
+There are two interpretations of the package name *gm*:
+
+1. grammar of music
+2. generate music
+
+They correspond to two functionalities of the package:
+
+1. a language for music representation
+2. generation of music scores and audio files
+
+Let's start with a quick example.
+
+
+## Example
 
 ```{r}
-m <- Music()
-```
-
-Add components:
-
-```{r}
-m <- m +
-  # add a 4/4 time signature
+music <- 
+  Music() +
   Meter(4, 4) +
-  # add a musical line of a C5 whole note
-  Line(pitches = list("C5"), durations = list("whole"))
+  Line(c("C5", "D5", "E5", "F5"))
+  
+show(music)
 ```
 
-Print the `Music` object to see a brief description of it:
+Let's go through the code line by line:
+
+1. `music <-` defines a variable.
+2. `Music()` initializes a `Music` object.
+3. `+ Meter(4, 4)` adds a 4/4 time signature.
+4. `+ Line(c("C5", "D5", "E5", "F5"))` adds four notes.
+5. `show(music)` generates the music.
+
+We don’t have to stop here. We can add more components. For example, add a tempo:
 
 ```{r}
-m
+music <- music + Tempo(180)
+show(music)
 ```
 
-Convert the `Music` object to musical score and audio file:
+Add an articulation:
 
 ```{r}
-show(m, to = c("score", "audio"))
+music <- music + Articulation(">", 1)
+show(music)
 ```
 
-Continue.
-
-Add a tempo mark:
+Add a pedal:
 
 ```{r}
-m <- m + Tempo(120)
-show(m)
+music <- music + Pedal(1, 4)
+show(music)
 ```
 
-Add another musical line as a part:
-
-```{r}
-m <- m + Line(
-  pitches = list("C3", "G3"),
-  durations = list("half", "half")
-)
-
-show(m)
-```
-
-Add another musical line as a voice:
-
-```{r}
-m <- m + Line(
-  pitches = list(c("E4", "G4"), c("D4", "F4"), c("F4", "A4"), c("E4", "G4")),
-  durations = list("quarter", "quarter", "quarter", "quarter"),
-  as = "voice",
-  to = 1
-)
-
-show(m)
-```
-
-This process can keep going, but let's stop here. If you want to go deeper,
-let's first learn how to install and configure gm.
+There are still many other components we can add. Before we dive in, let's see how to install and configure gm.
 
 
 ## Installation
 
-Install gm from CRAN:
+Install gm:
 
 ```r
 install.packages("gm")
 ```
 
-Or install the development version from GitHub:
-
-```r
-# install devtools if not
-# install.packages("devtools")
-
-devtools::install_github("flujoo/gm")
-```
-
-Download and install [MuseScore](https://musescore.org/),
-an open source and free notation software, which gm uses internally.
+Install [MuseScore](https://musescore.org/). MuseScore is open source
+and free notation software. Internally, gm uses MuseScore to generate music. 
 
 
 ## Configuration
 
-If you don't install MuseScore to the
-[default path](https://musescore.org/en/handbook/3/revert-factory-settings),
-please specify the path to the MuseScore executable.
+You don’t need to configure anything if MuseScore is installed to a [default path](https://musescore.org/en/handbook/4/revert-factory-settings).
 
-First, open .Renviron file. You can do this with
+Otherwise, please specify the path to the MuseScore executable file in .Renviron file:
 
-```r
-usethis::edit_r_environ()
-```
+1. Open .Renviron file.
+2. Add environment variable `MUSESCORE_PATH=<path to MuseScore>`.
+3. Restart R session.
 
-Next, add an environment variable into it:
+For example, the environment variable is like
 
-```
-MUSESCORE_PATH=<path to MuseScore executable>
-```
-
-Last, restart R session to activate the change.
-
-For example, suppose the path on a Windows system is
-
-```
-C:/Program Files/MuseScore 3/bin/MuseScore3.exe
-```
-
-If gm can't find it, you can add
-
-```
-MUSESCORE_PATH=C:/Program Files/MuseScore 3/bin/MuseScore3.exe
-```
-
-Now below is a complete guide to gm.
+- `MUSESCORE_PATH=C:/Program Files/MuseScore 4/bin/MuseScore4.exe` in Windows, and
+- `MUSESCORE_PATH=/Applications/MuseScore\ 4.app/Contents/MacOS/mscore` in macOS.
 
 
-## `Music` Objects
+## Music
 
-gm uses `Music` objects to represent music.
+At the highest level, gm uses `Music` objects to represent music.
 
-The workflow is usually like this:
+As shown in the *Example* section, the workflow for creating music is usually like this:
 
-1. Initialize an empty `Music` object with `Music()`.
+1. Initialize a `Music` object with `Music()`.
+2. Add components to it with `+`.
+3. Display the music with `show()`.
 
-2. Add components to it with `+`, for example, `Music() + Meter(4, 4)`.
-
-3. Print it, or convert it to musical score or audio file with `show()`
-to check its structure.
-
-4. Keep adding components and checking it until you get what you want.
-
-5. Sometimes you may want to export the final `Music` object with `export()`.
-
-The workflow and the grammar may remind you of ggplot2.
-
-Let's have a look at each component that you can add to a `Music` object.
-
-
-## `Line` Objects
-
-We use `Line` objects to represent musical lines.
-
-Create a `Line` object with `Line()`:
+A `Music` object is represented as a list of data frames. Each data frame represents some type of components of the music. To examine a `Music` object's representation, simply print it. For example, below is the representation of the `Music` object created in the *Example* section:
 
 ```{r}
-l <- Line(
-  pitches = list("C4", c("E4", "G4"), NA),
-  durations = list("quarter", "quarter", "quarter")
+music <- 
+  Music() +
+  Meter(4, 4) +
+  Line(c("C5", "D5", "E5", "F5"))
+
+music
+```
+
+We will explore every type of components as we proceed.
+
+
+## Musical Line
+
+Musical lines are the most basic units of music in gm. You can create a musical line with `Line()`.
+
+### Pitches and Durations
+
+You can specify the pitches and durations of a musical line with arguments `pitches` and `durations`. For example:
+
+```{r}
+line <- Line(
+  pitches = c("C5", "D5", "E5", "F5"),
+  durations = c(0.5, 1, 1.5, 2)
 )
+
+music <- Music() + Meter(5, 4) + line
+show(music, "score")
 ```
 
-This `Line` object consists of a note, a chord and a rest.
-
-Print it to check its structure:
+If `pitches` and `durations` have different lengths, the shorter one will be recycled. This feature is useful for repeating a pattern. For example:
 
 ```{r}
-l
+line <- Line(
+  pitches = c("A3", "E4", "C5", "B3", "E4", "G#4"),
+  durations = c("quarter.", "eighth", "quarter")
+)
+
+music <- Music() + Meter(3, 4) + line
+show(music)
 ```
 
-Add it to a `Music` object to convert it to musical score:
+We will talk more about pitches and durations later.
+
+### Musical Line Insertion
+
+You can insert a musical line at positions other than the first beat of the first bar with arguments `bar` and `offset`. For example:
 
 ```{r}
-m <- Music() + Meter(4, 4) + l
-show(m)
+line <- Line(c("C5", "D5", "E5"), bar = 2, offset = 1)
+music <- Music() + Meter(4, 4) + line
+show(music, "score")
 ```
 
-As you may have noticed, to represent a musical line, we don't directly supply
-notes, chords, or rests to `Line()` as input. Instead, we separate the line's
-pitch and durational contents. This is more convenient, since you may always 
-want to deal with one aspect and in the meantime ignore the other.
+The musical line is inserted at the second beat of the second bar.
+
+A more interesting example:
+
+```{r}
+pitches <- c(64, 65, 69, 71, 72, 76)
+music <- Music() + Meter(4, 4)
+
+for (i in 0:8) {
+  music <- music + Line(pitches, offset = 0.5 * i)
+}
+
+show(music)
+```
+
+The music contains nine parts, with identical pitches and durations. The difference lies in their insertion positions, creating an interesting echo sound effect.
+
+### Multiple Musical Lines
+
+Music can contain more than one musical line. For example:
+
+```{r}
+line_1 <- Line(c("C5", "D5", "E5", "F5"))
+line_2 <- Line(c("E4", "G4"), 2)
+line_3 <- Line("C4", 4)
+music <- Music() + Meter(4, 4) + line_1 + line_2 + line_3
+show(music, "score")
+```
+
+You can assign a name to a musical line with argument `name`. For example:
+
+```{r}
+line_1 <- Line(c("C5", "D5", "E5", "F5"), name = "a")
+line_2 <- Line(c("E4", "G4"), 2, name = "b")
+line_3 <- Line("C4", 4, name = "c")
+music <- Music() + Meter(4, 4) + line_1 + line_2 + line_3
+show(music, "score")
+```
+
+By default, a musical line is added to the end. You can change it with argument `to` and `after`. For example:
+
+```{r}
+line_1 <- Line(c("C5", "D5", "E5", "F5"), name = "a")
+line_2 <- Line(c("E4", "G4"), 2, name = "b")
+line_3 <- Line("C4", 4, name = "c", to = "a", after = FALSE)
+music <- Music() + Meter(4, 4) + line_1 + line_2 + line_3
+show(music, "score")
+```
+
+Now the third musical line is added to the beginning.
+
+### Musical Line Hierarchy
+
+There is a hierarchy of musical lines:
+
+1. part
+2. staff
+3. voice
+4. segment
+
+From the perspective of a music score,
+
+- a part can have several staffs;
+- a staff can have up to four voices;
+- a voice can have several segments.
+
+You can specify the hierarchy with argument `as`. For example, the following music has two parts:
+
+```{r}
+music <- 
+  Music() +
+  Meter(4, 4) +
+  Line(c("C5", "D5", "E5", "F5")) +
+  Line(c("C4", "G4"), 2, as = "part")
+
+show(music, "score")
+```
+
+The following music has one part, and this part has two staffs:
+
+```{r}
+music <- 
+  Music() +
+  Meter(4, 4) +
+  Line(c("C5", "D5", "E5", "F5")) +
+  Line(c("C4", "G4"), 2, as = "staff")
+
+show(music, "score")
+```
+
+The following music has one part of one staff, and this staff has two voices:
+
+```{r}
+music <- 
+  Music() +
+  Meter(4, 4) +
+  Line(c("C5", "D5", "E5", "F5")) +
+  Line(c("C4", "G4"), 2, as = "voice")
+
+show(music, "score")
+```
+
+Actually, the three examples above all sound the same. The hierarchy of musical lines is only discernible from the score.
+
+The following music has one part of one staff of one voice, and this voice has two segments:
+
+```{r}
+music <- 
+  Music() +
+  Meter(4, 4) +
+  Line(c("C5", "D5", "E5", "F5")) +
+  Line(c("C4", "G4"), 2, as = "segment", bar = 2)
+
+show(music, "score")
+```
+
+Segments are used to insert musical lines into other musical lines.
+
+### Musical Line Representation
+
+The `$lines` data frame of a `Music` object contains the information about all musical lines. For example:
+
+```{r}
+line_1 <- Line(c("C5", "D5", "E5", "F5"), name = "a")
+line_2 <- Line(c("E4", "G4"), 2, name = "b", as = "voice")
+line_3 <- Line("C4", 2, name = "c", as = "staff", offset = 2)
+music <- Music() + Meter(4, 4) + line_1 + line_2 + line_3
+show(music, "score")
+```
+
+```{r}
+music$lines
+```
+
+We can see from the data frame that this music has one part, and this part has two staffs. The first staff has two voices. The second staff is inserted at the third beat.
 
 
-### Pitches
+## Pitch
 
-The `pitches` argument in `Line()` represents a musical line's pitch contents.
+### Pitch Notation
 
-`pitches` must be a list, whose members can be
+You can use [scientific pitch notations](https://en.wikipedia.org/wiki/Scientific_pitch_notation) to specify pitches. For example:
 
-1. single pitch notations, like `"C4"`, to represent the pitch contents of
-notes,
-
-2. single MIDI note numbers, like `60` or `"60"`, also to represent the pitch
-contents of notes,
-
-3. single `NA`s to represent the pitch contents of rests, and
-
-4. vectors of pitch notations and MIDI note numbers, like `c("C4", "61")`,
-to represent the pitch contents of chords.
+```{r}
+pitches <- c("C4", "C#4", "D-4", "C##4", "D--4")
+music <- Music() + Meter(5, 4) + Line(pitches)
+show(music, "score")
+```
 
 A pitch notation consists of
 
-1. a tone name (from A to G),
-2. an optional accidental (\-, \-\-, \# or \#\#), and
-3. a number identifying the pitch's octave (from 0 to 9).
+1. a tone name which can be C, D, E, F, G, A, or B,
+2. an optional accidental which can be \-, \-\-, \#, or \#\#, and
+3. a number between 0 and 9 that indicates the pitch's octave.
 
-A MIDI note number is a number between 12 and 127.
+### MIDI Note Number
 
-See a
-[conversion table](https://en.wikipedia.org/wiki/Scientific_pitch_notation#Table_of_note_frequencies)
-of pitch notations and MIDI note numbers.
+A MIDI note number is a number between 12 and 127. You can also use MIDI note numbers to specify pitches. For example:
 
-An advantage of MIDI note numbers is that they are easy to operate. For
-example, we have the following four MIDI note numbers:
+```{r}
+pitches <- 61:64
+music <- Music() + Meter(4, 4) + Line(pitches)
+show(music, "score")
+```
+
+See a [conversion table](https://en.wikipedia.org/wiki/Scientific_pitch_notation#Table_of_note_frequencies) of pitch notations and MIDI note numbers.
+
+An advantage of MIDI note numbers is ease of operation. Suppose we have the following four MIDI note numbers:
 
 ```{r}
 pitches <- c(60, 62, 64, 65)
+music <- Music() + Meter(4, 4) + Line(pitches)
+show(music)
 ```
 
-```{r, echo = FALSE}
-m <- Music() + Meter(4, 4) + Line(as.list(pitches), rep(list(1), 4))
-show(m)
-```
-
-We can transpose them up by a fifth easily:
+To transpose them up by a fifth, we can simply add 7 to them:
 
 ```{r}
-pitches + 7
+pitches <- pitches + 7
+music <- Music() + Meter(4, 4) + Line(pitches)
+show(music)
 ```
 
-```{r, echo = FALSE}
-m <- Music() + Meter(4, 4) + Line(as.list(pitches + 7), rep(list(1), 4))
-show(m)
-```
-
-However, this advantage comes at a cost: MIDI note numbers are always
-ambiguous. For example, the following three pitches are all equivalent to
-MIDI note number 73:
-
-```{r, echo = FALSE}
-m <- Music() + Meter(3, 4) + Line(list("C#5", "D-5", "B##4"), list(1, 1, 1))
-show(m)
-```
-
-gm interprets MIDI note numbers based on keys and neighbor pitches. In the
-following example, MIDI note number 73 is interpreted as C5 sharp in the
-first measure, but as D5 flat in the second measure, for these two measures
-have different keys.
+However, a disadvantage of MIDI note numbers is ambiguity. For example, there is more than one equivalent pitch notation to the MIDI note number 73:
 
 ```{r}
-l <- Line(list(73, 73), list(2, 2))
-m <- Music() + Meter(2, 4) + Key(7, bar = 1) + Key(-7, bar = 2) + l
-show(m)
+pitches <- c("C#5", "D-5", "B##4")
+music <- Music() + Meter(3, 4) + Line(pitches)
+show(music, "score")
 ```
 
-gm is not perfect in interpreting MIDI note numbers, so if you want it to
-be precise, use pitch notations.
-
-
-### Durations
-
-The `durations` argument in `Line()` represents a musical line’s durational
-contents.
-
-`durations` must be a list, whose members can be
-
-1. single duration notations or their abbreviations, like `"quarter"` or
-just `"q"`,
-
-2. single duration values, like `1`, which is equivalent to `"quarter"`, and
-
-3. `Duration` objects returned by `tuplet()`, which is used to create complex
-tuplets.
-
-The most basic duration notations consist of only duration types. The
-duration types (and their abbreviations) defined in gm are:
-
-```{r, echo = FALSE, results = "asis"}
-for (i in 1:length(gm:::duration_types)) {
-  cat(paste0(
-    '- `"', (gm:::duration_types)[i], '"` or ',
-    '`"', (gm:::duration_type_abbrs)[i], '"`\n\n'
-  ))
-}
-```
-
-For example, the following musical line consists of a whole rest, a quarter
-rest, and a 32nd rest:
+gm interprets MIDI note numbers based on keys and neighbor pitches. In the following example, MIDI note number 73 is interpreted as C#5 in the first measure, but as D-5 in the second measure:
 
 ```{r}
-m <- Music() + Meter(6, 4) + Line(list(NA, NA, NA), list("w", "q", "32"))
-show(m)
+pitches <- c(73, 73)
+music <- Music() + Meter(1, 4) + Key(7) + Key(-7, bar = 2) + Line(pitches)
+show(music, "score")
 ```
 
-The duration type or its abbreviation can be followed by zero to four dots,
-in a duration notation, as in the following example:
+### Rest
+
+You can use `NA` to specify rests. For example:
 
 ```{r}
-l <- Line(rep(list(NA), 5), list("q", "q.", "q..", "q...", "q...."))
-m <- Music() + Meter(9, 4) + l
-show(m)
+pitches <- c("C4", NA, "D4", NA)
+music <- Music() + Meter(4, 4) + Line(pitches)
+show(music, "score")
 ```
 
-You can also append what we call "tupler" notations in gm to a duration
-notation to represent a tuplet:
+Sometimes rests are added by gm automatically. In the following example, the musical line is inserted at the second bar, so a rest is added to the first bar:
 
 ```{r}
-l <- Line(rep(list(NA), 3), list("q/3", "q/3", "q/3"))
-m <- Music() + Meter(1, 4) + l
-show(m)
+pitches <- c("C4", NA, "D4", NA)
+music <- Music() + Meter(4, 4) + Line(pitches, bar = 2)
+show(music, "score")
 ```
 
-In the above example, we use `"q/3"` to represent a triplet. You can read
-`"q/3"` as "divide a quarter note into three parts, and take one of them".
-We will talk more about tuplets in the next section.
-
-To sum up, a duration notation consists of
-
-1. a duration type or its abbreviation,
-2. zero to four dots, and
-3. zero or more tupler notations.
-
-You get a duration value when convert a duration notation to value. For
-example, `1` is equivalent to `"quarter"`, and `1.5` to `"quarter."`.
-
-However, the duration notations that can be converted to duration values must
-NOT contain tupler notation. For example, if you convert `"q/3"` to *value*,
-you get `1/3`, but this in gm is not a valid *duration value*. We put this
-restriction to avoid ambiguity. For example, value `1/3` can be `"q/3"`,
-`"half/6"`, or two tied `"eighth/3"`s.
-
-Also note that you can NOT use characters to represent duration values. For
-example, you can use duration value `1` to represent quarter note, but not 
-`"1"`, which is invalid in gm. This is also to avoid ambiguity. For example,
-we can use `"eighth"` to represent eighth note, whose abbreviation is `"8"`.
-if `"8"` was a duration value, it would represent breve note, there would
-be a conflict. So keep `"8"` to only eighth note, and `8` to breve note.
-
-
-### Tuplets
-
-Duration notations can't represent some complex tuplets.
-
-For example, how to represent the first tuplet in the following score:
-
-```{r, echo = FALSE}
-t1 <- tuplet("q", Tupler(3, take = "q"))
-t2 <- tuplet("q", Tupler(3, take = "8"))
-
-m <- Music() + Meter(1, 4) + Line(list(NA, NA), list(t1, t2))
-show(m)
-```
-
-This tuplet can read as "divide a quarter note into three parts, take two
-of them". We can't express "take two" in any duration notation. This is where
-we need `tuplet()` and `Tupler()`. Let's look at an example.
-
-We can express duration notation `"quarter/3"` with `tuplet()` and `Tupler()`
-as:
+In the following example, the musical line doesn’t fill the entire bar, so some rests are added to the end:
 
 ```{r}
-t <- tuplet("quarter", Tupler(3, unit = "eighth", take = "eighth"))
+pitches <- "C4"
+music <- Music() + Meter(4, 4) + Line(pitches)
+show(music, "score")
 ```
 
-This code can read as: divide a quarter note (`tuplet("quarter", ...)`) into
-there parts (`Tupler(3, ...)`), each part is an eighth note
-(`unit = "eighth"`), and we take one part (`take = "eighth"`).
+### Chord
 
-Print it and we can see it is just equivalent to `"quarter/3"`:
+You can use vectors to specify chords. Just remember to wrap them in a list. For example:
 
 ```{r}
-t
+pitches <- list("C4", c("E4", "G4"), NA, c(64, 67))
+music <- Music() + Meter(4, 4) + Line(pitches)
+show(music)
 ```
 
-Modify the code and we can represent the aforementioned tuplet:
+### Key
+
+You can use `Key()` to add a key signature. All keys:
 
 ```{r}
-tuplet("quarter", Tupler(3, unit = "eighth", take = "quarter"))
-```
+keys <- -7:7
 
-The difference is that this time we take two parts or units.
-
-To sum up, we use `tuplet()` to create complex tuplets, and `Tupler()` to
-specify how to divide a duration into parts and what to take from these parts.
-
-We can go further with these two functions.
-
-For example, we can change `unit` in the above example:
-
-```{r}
-t <- tuplet("quarter", Tupler(3, unit = "quarter", take = "quarter"))
-t
-```
-
-The score looks like this:
-
-```{r}
-m <- Music() + Meter(1, 4) + Line(list(NA, NA, NA), list(t, t, t))
-show(m)
-```
-
-This may seem strange to you, but it's syntactically valid.
-
-We can even create complex nested tuplets like in the following score:
-
-![](../man/figures/nested_tuplets.png)
-
-The first three tuplets can be represented by:
-
-```{r}
-t <- tuplet(
-  "half",
-  Tupler(3, unit = "quarter", take = "half"),
-  Tupler(3, unit = "quarter", take = "quarter")
-)
-
-t
-```
-
-Note that there are two `Tupler` objects in the above code.
-
-Create this score:
-
-```{r}
-l <- Line(rep(list(NA), 4), list(t, t, t, tuplet("half/3")))
-m <- Music() + Meter(2, 4) + l
-show(m)
-```
-
-Yes, there is something wrong with this score. MuseScore (which gm uses
-internally) has some bugs, so it can't convert MusicXML (which gm uses to
-represent musical scores internally) containing nested tuplets to score 
-correctly. So if there are nested tuplets in your `Music` object, you can
-export it to MusicXML file with `export()`, and open the file with other
-notation software like Finale. Below is a correct score generated in Finale:
-
-![](../man/figures/nested_tuplets_finale.png)
-
-Note that in `Line()` objects, tuplets must form tuplet groups, or you will
-get an error. For example,
-
-```{r, error = TRUE}
-# try to create a `Line` object which consists of only one tuplet
-Line(list(NA), list("q/3"))
-```
-
-Also note that tuplet groups must NOT cross barline. For example,
-
-```{r, error = TRUE}
-l <- Line(list(NA, NA, NA), list("h/3", "h/3", "h/3"))
-m <- Music() + Meter(1, 4) + l
-show(m)
-```
-
-
-### Tie
-
-Sometimes you may want to tie together some notes, you can do this by
-specifying the argument `tie` in `Line()`.
-
-```{r}
-l <- Line(
-  pitches = list(c("C5", "E5"), c("C5", "E5"), c("C5", "E5"), c("C5", "E5")),
-  durations = list("quarter", "quarter", "quarter", "quarter"),
-  tie = list(c(1, 1), c(2, 2), 3)
-)
-
-m <- Music() + Meter(4, 4) + l
-show(m)
-```
-
-In `tie = list(c(1, 1), c(2, 2), 3)` in the above example,
-
-1. `c(1, 1)` means we add a tie to the first note of the first chord to
-connect it with the first note of the second chord. Note that to tie two
-adjacent notes, we only specify the position of the first note.
-
-2. Similarly, `c(2, 2)` means we add a tie to the second note of the second
-chord to connect it with the second note of the third chord.
-
-3. `3` means we add ties to the whole third chord to connect it with the
-fourth chord.
-
-However, don't bother to split a cross-bar note and tie resulted notes
-together, gm takes care of this kind of situations, like in the following
-example:
-
-```{r}
-m <- Music() + Meter(1, 4) + Line(list("C5"), list(4))
-show(m)
-```
-
-The C5 whole note is automatically split into four tied quarter notes,
-because the time signature is 1/4.
-
-
-### `bar` and `offset`
-
-With these two arguments in `Line()`, you can easily insert a `Line` object
-at other positions rather than the first beat of the first measure.
-
-For example, below is an ordinary `Line` object:
-
-```{r}
-l <- Line(list("C5", "D5", "E5"), list(1, 1, 1))
-m <- Music() + Meter(4, 4) + l
-show(m)
-```
-
-We can insert it into the third measure after the second beat:
-
-```{r}
-l <- Line(list("C5", "D5", "E5"), list(1, 1, 1), bar = 3, offset = 2)
-m <- Music() + Meter(4, 4) + l
-show(m)
-```
-
-
-### Multiple `Line` Objects
-
-We can add multiple `Line` objects to a `Music` object in different ways.
-
-For example, below is a `Music` object that consists of only one `Line`
-object:
-
-```{r}
-l1 <- Line(rep(list("E5"), 8), rep(list(0.5), 8), name = "a")
-m <- Music() + Meter(4, 4) + l1
-show(m)
-```
-
-The `Line` object is named "a" with argument `name`.
-
-Below is another `Line` object named "b":
-
-```r
-Line(list("C4", "G4"), list(2, 2), name = "b")
-```
-
-We can add `Line` "b" as another **part**:
-
-```{r}
-l2 <- Line(list("C4", "G4"), list(2, 2), name = "b")
-show(m + l2)
-```
-
-`Line` "b" is appended at the end by default. We can make `Line` "b" come
-before `Line` "a", by specifying argument `to` and `after`:
-
-```{r}
-l2 <- Line(list("C4", "G4"), list(2, 2), name = "b", to = "a", after = FALSE)
-m <- m + l2
-show(m)
-```
-
-`to = "a"` means we add `Line` "b" with `Line` "a" as a reference.
-
-The `Music` object contains two `Line` objects now. Let's introduce a third
-`Line` object named "c":
-
-```r
-Line(list("A4", "B4", "C5"), rep(list("w/3"), 3), name = "c")
-```
-
-We can add it to `Line` "a" as another **voice**:
-
-```{r}
-l3 <- Line(
-  pitches = list("A4", "B4", "C5"),
-  durations = rep(list("w/3"), 3),
-  name = "c",
-  to = "a",
-  as = "voice"
-)
-
-m <- m + l3
-show(m)
-```
-
-Finally, below is a fourth `Line`, let's add it to `Line` "b" as another
-**staff**:
-
-```{r}
-l4 <- Line(list("E3"), list(4), to = "b", as = "staff", name = "d")
-m <- m + l4
-show(m)
-```
-
-We can print this `Music` to check its structure:
-
-```{r}
-m
-```
-
-The `Music` contains four `Line`s now, which have different states. In summary,
-there are two parts, the first part contains two staffs, which are `Line` "b"
-and `Line` "d", and the second part contains one staff which has two voices,
-which are `Line` "a" and `Line` "c".
-
-With these arguments in `Line()` we have so far introduced, you can create
-quite complex musical scores easily.
-
-
-## `Meter` Objects
-
-We use `Meter` objects to represent time signatures.
-
-For example, 3/4 time signature can be represented by
-
-```{r}
-Meter(number = 3, unit = 4)
-```
-
-We can add it to a `Music` object:
-
-```{r}
-Music() + Meter(3, 4)
-```
-
-To change time signature in the middle, we can add another `Meter` object with
-specific `bar`. For example,
-
-```{r}
-m <- Music() + Meter(3, 4) + Meter(1, 8, bar = 2)
-m
-```
-
-Add a `Line`, we can convert this `Music` to score:
-
-```{r}
-m <- m + Line(list("G4", "A4"), list(3, 0.5))
-show(m)
-```
-
-By specifying arguments `actual_number` and `actual_unit`, we can create
-**pickup measures**. For example,
-
-```{r}
-m <- Music() +
-  Meter(4, 4, actual_number = 1, actual_unit = 4) +
-  Meter(4, 4, bar = 2, invisible = TRUE)
-
-m
-
-l <- Line(list("A4", "B4", "C5", "D5", "E5"), rep(list(1), 5))
-show(m + l)
-```
-
-The time signature which appears on the first measure is 4/4, but the actual
-one is 1/4. `invisible = TRUE` makes the second time signature invisible.
-
-
-## `Key` Objects
-
-We use `Key` objects to represent key signatures.
-
-By specifying argument `key` in `Key()`, we can create key signatures from
-C flat major to C sharp major.
-
-```{r}
-for (key in -7:7) {
+for (key in keys) {
   print(Key(key))
 }
 ```
 
-By specifying argument `bar` in `Key()`, we can change the key signature of
-a musical score in the middle. For example,
+You can add a key signature to a specific bar by using the `bar` argument. For example:
 
 ```{r}
-m <- Music() + Meter(1, 4) + Key(-7) + Key(0, bar = 2) + Key(7, bar = 3)
-m
+music <- Music() + Meter(1, 4) + Line(durations = rep(1, length(keys)))
 
-l <- Line(list(NA, NA, NA), list(1, 1, 1))
-show(m + l)
+for (i in seq_along(keys)) {
+  music <- music + Key(keys[i], bar = i)
+}
+
+show(music, "score")
 ```
 
-We can add a key signature to a specific part or staff, rather than to the
-whole score. For example, below is a musical score of two parts:
+You can add a key signature only to a part or staff. For example:
 
 ```{r}
-m <- Music() + Meter(4, 4) +
-  Line(list("E5"), list(4)) +
-  Line(list("G4", "A4"), list(2, 2), to = 1, as = "staff") +
-  Line(list("C4"), list(4)) +
-  Line(list("C3", "D3"), list(2, 2), to = 3, as = "staff")
+music <-
+  Music() +
+  Meter(1, 4) +
+  Line(NA) +
+  Line(NA, as = "staff") +
+  Line(NA) +
+  Line(NA, as = "staff") +
+  Key(1, to = 1) +
+  Key(-1, to = 3, scope = "staff")
 
-show(m)
+show(music, "score")
 ```
 
-We can change the key signature of only the first part:
+`Key(1, to = 1)` adds a G major to the first musical line and it affects the whole part, while `Key(-1, to = 3, scope = "staff")` adds an F major to the third musical line and it affects only that corresponding staff.
+
+### Clef
+
+You can use `Clef()` to add a clef. For example:
 
 ```{r}
-m <- m + Key(-2, to = 1)
-show(m)
+clef <- Clef("F")
+music <- Music() + Meter(2, 4) + Line(c("C3", "D3")) + clef
+show(music, "score")
 ```
 
-`to = 1` means the `Key` object is added only to the part containing the first
-`Line` in the `Music` object.
-
-We can change the key signature of only the second staff of the second part:
-
-```{r}
-m <- m + Key(2, to = 4, scope = "staff")
-show(m)
-```
-
-`scope = "staff"` means the key signature is added only to a specific staff.
-
-
-## `Clef` Objects
-
-We use `Clef` objects to represent clefs.
-
-`Clef` objects you can create in gm are:
+All supported clefs:
 
 ```{r}
 Clef("G")
@@ -774,183 +498,530 @@ Clef("C", line = 4)
 Clef("C", line = 5)
 ```
 
-gm automatically adds a clef to a staff based on its pitch contents, if
-the staff has no clef at the beginning. For example, in the following score,
-gm adds an alto clef to the staff:
+You can add a clef at positions other than the first beat of the first bar. For example:
 
 ```{r}
-l <- Line(list("B3", "C4", "D4"), list(3, 3, 3))
-m <- Music() + Meter(3, 4) + l
-show(m)
-```
+music <-
+  Music() +
+  Meter(2, 4) +
+  Line(c("C3", "D3"), bar = 2) +
+  Clef("F", bar = 2, offset = 1)
 
-If not satisfied, you can change it:
-
-```{r}
-m <- m + Clef("G", to = 1)
-show(m)
-```
-
-You can also add a clef into other measures:
-
-```{r}
-m <- m + Clef("F", to = 1, bar = 2)
-show(m)
-```
-
-Or even at other beat:
-
-```{r}
-m <- m + Clef("G", octave = -1, to = 1, bar = 3, offset = 2)
-show(m)
+show(music, "score")
 ```
 
 
-## `Tempo` Objects
+## Rhythm
 
-We use `Tempo` objects to represent tempo marks.
+### Duration Notation
 
-We can create a `Tempo` object with `Tempo()`. For example,
+You can use duration notations to specify durations. For example:
 
 ```{r}
-Tempo(tempo = 240)
+durations <- c("q.", "eighth", "quarter..", "16th")
+music <- Music() + Meter(4, 4) + Line(durations = durations)
+show(music, "score")
 ```
 
-`tempo = 240` means the speed is 240 quarter notes per minute. The default
-unit is quarter note, you can change it with argument `unit`:
+A duration notation can have two parts:
 
-```{r}
-Tempo(tempo = 240, unit = "half")
+- a duration type or its abbreviation
+- zero to four dots
+
+All supported duration types:
+
+```{r echo = FALSE}
+duration_types <- gm:::duration_types
+
+duration_types$value <- duration_types$value |>
+  lapply(gm:::to_fraction) |>
+  lapply(\(fraction) {
+    if (fraction[2] == 1) fraction[1] else paste(fraction, collapse = "/")
+  }) |>
+  as.character()
+
+names(duration_types) <- c("Duration Type", "Abbreviation", "Value")
+knitr::kable(duration_types)
 ```
 
-These two speeds, 240 quarter notes per minute and 120 half notes per minute,
-are nonetheless equivalent.
+### Duration Value
 
-With arguments `bar` and `offset`, you can add a `Tempo` object at any
-position. For example,
+You can also use duration values to specify durations. For example:
 
 ```{r}
-m <- Music() +
+durations <- 1:5
+music <- Music() + Meter(5, 4) + Line("C4", durations)
+show(music, "score")
+```
+
+A valid duration value should be equal to the total length of one or more duration types. For example, 0.5 is equal to the length of eighth; 1.5 is equal to the total length of quarter and eighth; 1.1 is not valid.
+
+### Tuplet
+
+You can specify tuplets with more complex duration notations. For example:
+
+```{r}
+durations <- rep("half/3", 3)
+music <- Music() + Meter(2, 4) + Line(durations = durations)
+show(music, "score")
+```
+
+Here we use "/3" to divide the half note into three tuplets. In the following example, we divide the half note into two tuplets of different lengths:
+
+```{r}
+durations <- c("half/3", "half/3*(half/quarter)")
+music <- Music() + Meter(2, 4) + Line(durations = durations)
+show(music, "score")
+```
+
+Please note that tuplets should come in groups. For example, two half/3 tuplets or four half/3 tuplets cannot form a valid group. And a tuplet group should not cross bar lines.
+
+gm can represent nested tuplets like this:
+
+![](../man/figures/nested_tuplets.png)
+
+However, because gm uses MusicXML to represent music internally, but MuseScore cannot handle nested tuplets with MusicXML, we will skip this part.
+
+### Meter
+
+You can use `Meter()` to add a time signature. For example:
+
+```{r}
+music <-
+  Music() +
+  Meter(1, 4) +
+  Meter(2, 4, bar = 2) +
+  Line(c("C4", "E4", "G4"))
+
+show(music, "score")
+```
+
+To apply `show()` to a `Music` object, there must be a time signature at the first bar.
+
+You can add a pickup measure by using arguments `actual_number`, `actual_unit`, and `invisible`. For example:
+
+```{r}
+music <-
+  Music() +
+  Meter(4, 4, actual_number = 1, actual_unit = 4) +
+  Meter(4, 4, bar = 2, invisible = TRUE) +
+  Line(c("A4", "B4", "C5", "D5", "E5"))
+
+show(music, "score")
+```
+
+### Tempo
+
+You can use `Tempo()` to add a tempo mark. For example:
+
+```{r}
+music <- 
+  Music() +
   Meter(4, 4) +
-  Line(as.list(70:77), rep(list(1), 8)) +
-  Tempo(60) +
-  Tempo(240, unit = "half.", bar = 1, offset = 2.5)
+  Line(60:67) +
+  Tempo(90) +
+  Tempo(120, bar = 2) +
+  Tempo(200, bar = 2, offset = 2)
 
-show(m, to = c("score", "audio"))
+show(music)
 ```
 
-
-## Comparison
-
-### R Package [tabr](https://github.com/leonawicz/tabr)
-
-At the time of writing, the author knows only tabr that has similar purposes
-and similar level of functionality to gm, among other R music packages.
-
-However, there are some noticeable differences.
-
-First, besides music generation, tabr also provides functions for music 
-analysis and manipulation. gm is only for music generation.
-
-Second, as for music generation, tabr is more about music notation.
-For example, tabr can generate guitar tabs and add more music notation
-symbols to score than gm can. gm is more about music creation at a higher
-level.
-
-Third, gm embeds generated music in R Markdown documents and R Jupyter
-Notebooks, while tabr exports it.
-
-Fourth, gm uses R's basic data structures such as vector and list
-to represent music, while tabr uses strings.
-
-Last, gm's language is simpler than tabr's, it is more straightforward
-to add components such as musical lines in gm. This and the above difference
-make gm more suitable for music programming.
-
-
-### Python Library [music21](http://web.mit.edu/music21/)
-
-music21 is a mature and famous Python library which provides abundant
-tools for music generation and analysis. For its music generation 
-functionality, music21 can generate more professional musical scores than
-gm can, and also works in Python Jupyter Notebooks.
-
-However, the advantage of gm is still that its language is far simpler 
-and more intuitive.
-
-For example, in music21, it's cumbersome to define notes and add them to
-musical lines:
-
-```python
-from music21 import *
-
-note1 = note.Note("C4")
-note2 = note.Note("F#4")
-note3 = note.Note("B-2")
-
-stream1 = stream.Stream()
-
-stream1.append(note1)
-stream1.append(note2)
-stream1.append(note3)
-```
-
-Also, creation of complex and nested tuplets is not straightforward.
-See [Complex and Tuplets](http://web.mit.edu/music21/doc/usersGuide/usersGuide_19_duration2.html).
-
-And sometimes users have to be concerned about musical score structures when
-they only want to express music structures at a higher level.
-
-
-### Summary
-
-In summary, gm is a good tool for expression of high-level music structures
-and communication of generated music. It's not yet for professional level
-music notation.
-
-
-## Algorithmic Composition
-
-gm's language is simple but powerful. One possible use of gm is
-algorithmic composition, which means using algorithms to create music.
-
-Below is an example:
+You can add more sophisticated tempo marks by using argument `marking`. For example:
 
 ```{r}
-pitches <- as.list(c(64, 65, 69, 71, 72, 76))
-durations <- rep(list(1), length(pitches))
+music <- 
+  Music() +
+  Meter(4, 4) +
+  Line(60:67) +
+  Tempo(90, marking = "Slowly!!") +
+  Tempo(200, offset = 2, marking = "quarter. = quarter") +
+  Tempo(120, bar = 2, marking = "Allegro (quarter = 110-130)")
 
-m <- Music() + Meter(4, 4) + Tempo(120)
+show(music, "score")
+```
 
-for (i in 0:8) {
-  m <- m + Line(pitches, durations, offset = 0.5 * i)
+
+## Note
+
+### Note Representation
+
+In `Line()`, we don't provide notes, rests, or chords directly. Instead, we separate the pitches and durations. This feature is convenient for music programming.
+
+However, `Music` objects have a data frame `$notes` for representing notes. For example:
+
+```{r}
+music <-
+  Music() +
+  Meter(4, 4) +
+  Line(list("C4", NA, c("C4", "E4")), list(1, "quarter", 2))
+
+show(music, "score")
+```
+
+```{r}
+music$notes
+```
+
+The meaning of each column:
+
+- `line` indicates the row number of the musical line a note belongs to.
+- `i` indicates a note's index in the musical line.
+- `j` indicates a note's index in a chord.
+- `pitch` indicates the pitch notation of a note.
+- `midi` indicates the MIDI note number of a note.
+- `duration` indicates the duration notation of a note.
+- `length` indicates the length of a note's duration.
+
+### Tie
+
+You can tie together two notes with `Tie()`. For example:
+
+```{r}
+notes <- Line(c("C4", "C4"))
+tie <- Tie(1)
+music <- Music() + Meter(2, 4) + notes + tie
+show(music, "score")
+```
+
+You can tie together some notes in chords or the whole chords. For example:
+
+```{r}
+chords <- Line(list(c("C4", "E4"), c("C4", "E4")))
+tie <- Tie(1, 2)
+music <- Music() + Meter(2, 4) + chords + tie
+show(music, "score")
+```
+
+```{r}
+chords <- Line(list(c("C4", "E4"), c("C4", "E4")))
+tie <- Tie(1)
+music <- Music() + Meter(2, 4) + chords + tie
+show(music, "score")
+```
+
+gm automatically splits cross-bar notes and adds ties. For example:
+
+```{r}
+cross_bar_note <- Line("C4", 4)
+music <- Music() + Meter(1, 4) + cross_bar_note
+show(music, "score")
+```
+
+### Grace Note
+
+You can add grace notes with `Grace()`. For example:
+
+```{r}
+line <- Line(c("A3", "B3", "C4", "D4"), c(0.25, 0.25, 1, 1))
+music <- Music() + Meter(2, 4) + line + Grace(1) + Grace(2)
+show(music)
+```
+
+The first two notes are indicated as grace notes.
+
+### Accidental
+
+gm adds accidentals to notes based on the key. You can change default accidentals with `Accidental()`. For example:
+
+```{r}
+accidental <- Accidental("natural", 2)
+music <- Music() + Meter(2, 4) + Line(c("C4", "C4")) + accidental
+show(music, "score")
+```
+
+### Notehead
+
+You can change the shape or color of a note with `Notehead()`. For example:
+
+```{r}
+notehead <- Notehead(1, shape = "diamond", color = "#FF0000")
+music <- Music() + Meter(2, 4) + Line(c("C4", "C4")) + notehead
+show(music, "score")
+```
+
+### Stem
+
+You can change the stem of a note with `Stem()`. For example:
+
+```{r}
+stem <- Stem("none", 1)
+music <- Music() + Meter(2, 4) + Line(c("C4", "C4")) + stem
+show(music, "score")
+```
+
+### Articulation
+
+You can add an articulation to a note with `Articulation()`. Some examples:
+
+```{r}
+music <- 
+  Music() +
+  Meter(4, 4) +
+  Line(c("C4", "D4", "E4", "F4")) +
+  Articulation(">", 1) +
+  Articulation(".", 2) +
+  Articulation("'", 3) +
+  Articulation("-", 4)
+  
+show(music)
+```
+
+All supported articulations:
+
+```{r echo = FALSE}
+articulations <- gm:::articulations
+names(articulations) <- c("MuseScore", "MusicXML", "Symbol")
+knitr::kable(articulations)
+```
+
+### Fermata
+
+You can add a fermata to a note with `Fermata()`. For example:
+
+```{r}
+music <- 
+  Music() +
+  Meter(4, 4) +
+  Line(c("C4", "D4", "E4", "F4")) +
+  Fermata(4, shape = "square")
+  
+show(music, "score")
+```
+
+### Breath Mark
+
+You can add a breath mark to a note with `Breath()`. For example:
+
+```{r}
+music <- 
+  Music() +
+  Meter(4, 4) +
+  Line(c("C4", "D4", "E4", "F4")) +
+  Breath(2)
+  
+show(music, "score")
+```
+
+### Ornament
+
+You can add an ornament to a note with the following options:
+
+- `Schleifer()`
+- `Mordent()`
+- `Trill()`
+- `Turn()`
+- `Tremolo()`
+
+Some examples:
+
+```{r}
+music <- 
+  Music() +
+  Meter(7, 4) +
+  Line(c("B4", "C5", "D5", "E5", "F5", "G5", "A5")) +
+  Tremolo(3, 1) +
+  Turn(2, inverted = TRUE) +
+  Mordent(3, long = TRUE) + 
+  Trill(4) + 
+  Trill(5, 6) +
+  Schleifer(7)
+
+show(music)
+```
+
+### Slur
+
+You can add a slur to notes with `Slur()`. For example:
+
+```{r}
+music <- Music() + Meter(4, 4) + Line(60:63) + Slur(1, 4)
+show(music, "score")
+```
+
+Slurs can cross staffs. For example:
+
+```{r}
+music <- 
+  Music() +
+  Meter(4, 4) +
+  Line(c("C4", "D4")) +
+  Line(c("E4", "F4"), offset = 2, as = "staff") +
+  Slur(1, 2, to = 1, to_j = 2)
+
+show(music, "score")
+```
+
+
+## Loudness
+
+### Dynamics
+
+You can use `Dynamic()` to add dynamic markings. For example:
+
+```{r}
+music <-
+  Music() +
+  Meter(4, 4) +
+  Line(60:67) +
+  Dynamic("p", 1) +
+  Dynamic("mf", 3) +
+  Dynamic("fff", 5) +
+  Dynamic("pp", 7)
+
+show(music)
+```
+
+### Velocity
+
+You can use `Velocity()` to adjust note loudness more precisely. For example:
+
+```{r}
+pitches <- 74:50
+velocities <- seq(5, 127, 5)
+music <- Music() + Meter(4, 4) + Tempo(200) + Line(pitches, 0.5)
+
+for (i in seq_along(velocities)) {
+  music <- music + Velocity(velocities[i], 1, i)
 }
 
-show(m, to = c("score", "audio"))
+show(music)
 ```
 
-The code generates nine parts which all contain the same pitch and durational
-contents. The only difference is that their delays are gradually increased,
-to create the interesting echo sound effect.
+### Dynamic Change
 
-In this example, you can see how gm uses R's basic data structures to
-represent pitches and durations, and how gm's language is simple and 
-high-level. These two features make gm very suitable for music programming,
-without users considering music notation details.
+You can use `Hairpin()` to add crescendo and decrescendo symbols. For example:
+
+```{r}
+music <-
+  Music() +
+  Meter(4, 4) +
+  Line(60:67) +
+  Dynamic("pp", 1) +
+  Dynamic("ff", 8) +
+  Hairpin("<", 2, 7)
+
+show(music)
+```
 
 
-## Citation, Donation and Contact
+## Timbre 
 
-Cite gm:
+### Instrument
+
+You can use `Instrument()` to specify the instrument of a part. For example:
+
+```{r}
+pitches <- c("C4", "D4", "E4", "F4")
+
+music <-
+  Music() +
+  Meter(4, 4) +
+  Line(pitches) +
+  Line(pitches, bar = 2)
+
+show(music)  
+```
+
+```{r}
+instrument_1 <- Instrument(10, 1)
+instrument_1
+```
+
+```{r}
+instrument_2 <- Instrument(76, 2)
+instrument_2
+```
+
+```{r}
+music <- music + instrument_1 + instrument_2
+show(music)
+```
+
+You can change the sound placement with argument `pan`. For example:
+
+```{r echo = FALSE}
+path <- "/Applications/MuseScore 3.app/Contents/MacOS/mscore"
+options(gm.musescore_path = path)
+```
+
+```{r}
+pitches <- c("C4", "D4", "E4", "F4")
+
+music <-
+  Music() +
+  Meter(4, 4) +
+  Line(pitches) +
+  Line(pitches, bar = 2) + 
+  Line(pitches, bar = 3) +
+  Instrument(1, 1, pan = -90) +
+  Instrument(1, 2, pan = 0) +
+  Instrument(1, 3, pan = 90)
+
+show(music)  
+```
+
+```{r, echo = FALSE}
+options(gm.musescore_path = NULL)
+```
+
+Unfortunately, `pan` only works in MuseScore 3, while the latest version is 4, as of the time of writing. The two versions have slightly different features. So it’s recommended to install both versions, and temporarily change the path using `options()` when needed. For example, in macOS:
 
 ```r
-citation(package = "gm")
+path <- "/Applications/MuseScore 3.app/Contents/MacOS/mscore"
+options(gm.musescore_path = path)
 ```
 
-if you appreciate gm, please consider a donation:
+### Pedal
 
-<https://ko-fi.com/flujoo>
+You can use `Pedal()` to add pedals. For example, the following are first two bars of Chopin’s nocturne Op.72 No.1:
 
-Please free to contact me if you want to say anything:
+```{r}
+music <-
+  Music() +
+  Meter(4, 4) +
+  Key(1) +
+  Tempo(60) +
+  
+  Line(c("B4", "G5", "F#5", "E5"), c("8", "h.", "8", "8"), bar = 2) +
+  Grace(1) +
+  
+  Line(rep(c("E2", "B2", "G3", "E3", "C4", "B3"), 4), "q/3", as = "staff") +
+  Clef("F") +
+  Dynamic("p", 1) +
+  Pedal(1, 12) +
+  Pedal(13, 24)
 
-renfeimao AT gmail.com
+show(music)
+```
+
+
+## Lyrics
+
+You can add lyrics by using `Lyric()`. For example:
+
+```{r}
+music <-
+  Music() +
+  Meter(4, 4) +
+  Line(60:63) +
+  Lyric("My_love-", 1) +
+  Lyric("-ly", 2) +
+  Lyric("cat_", 3) +
+  Lyric("_", 4) +
+  Lyric("Hey", 1, verse = 2) +
+  Lyric("Jude", 2, verse = 2)
+  
+show(music, "score")
+```
+
+
+## MuseScore
+
+You can pass [MuseScore command line options](https://musescore.org/en/handbook/4/command-line-usage) to `export()` and `show()`.
+
+For example, you can change score's DPI and margin:
+
+```{r}
+music <- Music() + Meter(4, 4) + Line("C5")
+show(music, "score", musescore = "-r 400 -T 100")
+```
